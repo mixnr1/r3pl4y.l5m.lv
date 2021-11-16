@@ -1,37 +1,81 @@
 import re
+import os
 import requests
-import config
+from requests.api import get
 import time
-start = time.time()
-start_tuple=time.localtime()
-start_time = time.strftime("%Y-%m-%d %H:%M:%S", start_tuple)
+from seleniumwire import webdriver
+from selenium.webdriver.chrome.options import Options
+def download_file(url, file_name):
+        with open(file_name, "wb") as file:
+                response = get(url)
+                file.write(response.content)
+link = input("Enter the link to download: ")
+options = Options()
+options.add_argument("--headless")
+driver = webdriver.Chrome(options=options)
+driver.get(link)
+print("Please wait couple seconds...")
+time.sleep(3)
+driver.switch_to.frame(driver.find_element_by_id("media-player"))
+driver.switch_to.frame(driver.find_element_by_id("video-player"))
+driver.find_element_by_class_name("vjs-big-play-button").click()
+time.sleep(3)
+for request in driver.requests:
+        if str(request.url).startswith('https://ltv2060.cloudycdn.services'):
+                if 'playlist' in request.url:
+                        if 'm3u8' in request.url:
+                                download_file(request.url, 'playlist.m3u8')
+                                playlist_url=str(request.url)
+driver.close()
+url_end = re.search(r'(?<=playlist.m3u8).*', playlist_url).group(0)
+url_start = playlist_url.split('playlist')[0]
+open_file = open('playlist.m3u8', 'r')
+lines = open_file.readlines()
+resolution_dic={}
+for line in lines:
+        if 'RESOLUTION=' in line:
+                resolution = (line.split('RESOLUTION=')[1]).replace('\n', '')
+                if ',' in resolution:
+                        resolution=resolution.split(',')[0]
+                        url_link = (lines[lines.index(line)+1]).replace('\n', '')
+                        resolution_dic[resolution] = url_link
+                        # print(resolution,":",url_link)
+                else:
+                        url_link = (lines[lines.index(line)+1]).replace('\n', '')
+                        resolution_dic[resolution] = url_link
+                        # print(resolution,":",url_link)
+keys=[]
+for key, value in resolution_dic.items():
+        keys.append(key)     
+input_resolution = input(f'Choose resolution:\n1: {keys[0]}\n2: {keys[1]}\n3: {keys[2]}\n')
+if input_resolution == '1':
+        url_resolution = resolution_dic[keys[0]]
+        download_file(url_start+url_resolution+url_end, f'chunklist_{keys[0]}.m3u8')
+if input_resolution == '2':
+        url_resolution = resolution_dic[keys[1]]
+        download_file(url_start+url_resolution+url_end, f'chunklist_{keys[1]}.m3u8')
+if input_resolution == '3':
+        url_resolution = resolution_dic[keys[2]]
+        download_file(url_start+url_resolution+url_end, f'chunklist_{keys[2]}.m3u8')
+file_name = input('Enter file name :')
+print('Downloading...')
+for file in os.listdir('.'):
+        if 'chunklist' in file:
+                file_to_open = file
+                break
+open_file=open(file_to_open, 'r')
+lines = open_file.readlines()
+download_url_list = []
+for line in lines:
+        with open(file_name+'.ts', 'wb') as f:
+                if '.ts' in line and '#EXT-X-ENDLIST' not in line:
+                        download_url=str(url_start+line.replace('\n', '')+url_end)
+                        download_url_list.append(download_url)
+with open(file_name+'.ts', 'wb') as f:
+        for li in download_url_list:
+                r = requests.get(li.rstrip('\n'))
+                f.write(r.content)
+os.remove(file_to_open)
+os.remove('playlist.m3u8')
+print('Done!')
 
-# main_url = "https://ltv2060.cloudycdn.services/store/_definst_/tmsp00060/vodt/00/c3/240240/w98_D19-2100-0.smil/"
-# url3="https://ltv2060.cloudycdn.services/store/_definst_/tmsp00060/vodt/00/c3/240240/w98_D19-2100-0.smil/chunklist_b1000000_sleng_t64U0Q=.m3u8?VThhlA715QEZbtrlQYE-8SFANLeoMRdsJ_AQYL4D5Fl_-6FSQnOYunbaYAl7ru3sskfu6MZeA1v91pnWd3YTDFQWmA529NOCl6I61zrVjH3D1YggZGF_4CvwIkxLOzDBvI_ftMxnfwNq1NE-JaqBxnHn4NNaI4D-AWgWcou-qjjT4y5rrFbSzlQLSF1ItPTDu8qB-HZcKlM"
-
-
-main_url="https://ltv2060.cloudycdn.services/store/_definst_/tmsp00060/vodt/00/c3/240247/abi_N18-0580-0.smil/"
-url3="https://ltv2060.cloudycdn.services/store/_definst_/tmsp00060/vodt/00/c3/240247/abi_N18-0580-0.smil/chunklist_b1000000_sleng_t64U0Q=_cfdG1zcDAwMDYwL3ZvZHQvMDAvYzMvMjQwMjQ3L04xOC0wNTgwLTAwMV9Nb2xpamFzX2xhdl8xX21wNC50dG1s.m3u8?gdqtUiOoyGmSQ4bSC-y3la9FXlxpYTXpt-TqAOUGSwVERBuGgprq-OVk0-AyXmg0bsxrAfSEAh1cisFieI91ne0W9iKxvs8XmqjioTIQE2u9bo5dmCpRLiK05NNqUXJcr1mBvp-NYOEXSYPtsV7l_o8hpaRQyeF3xV1nODvmGYp9rncHd0KqhfVIOPExUNAmJ2_94bqOCnkb"
-
-
-
-r3 = requests.get(url3, proxies=config.proxies)
-file_text=open(config.path+"links.txt",'w')
-for link in r3.text.split('\n'):
-    if re.findall('media_b1000000_sleng_t64U0Q=', link):
-        # print(link)
-        # print(main_url+link)
-        file_text.write(str(main_url + link + '\n')) 
-file_text.close()
-
-link_ls=open(config.path+"links.txt",'r')
-with open('movie.ts', 'wb') as f:
-    for li in link_ls:
-        r = requests.get(li.rstrip('\n'), proxies=config.proxies)
-        f.write(r.content)
-
-end = time.time()
-end_tuple = time.localtime()
-end_time = time.strftime("%Y-%m-%d %H:%M:%S", end_tuple)
-print("Script ended: "+end_time)
-print("Script running time: "+time.strftime('%H:%M:%S', time.gmtime(end - start)))
