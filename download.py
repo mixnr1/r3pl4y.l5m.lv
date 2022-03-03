@@ -4,6 +4,7 @@ import requests
 from requests.api import get
 import time
 from seleniumwire import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 def download_file(url, file_name):
         with open(file_name, "wb") as file:
@@ -11,14 +12,16 @@ def download_file(url, file_name):
                 file.write(response.content)
 link = input("Enter the link to download: ")
 options = Options()
-options.add_argument("--headless")
-driver = webdriver.Chrome(options=options)
+# options.add_argument("--headless")
+driver = webdriver.Chrome("/home/mix/Desktop/python_projects/r3pl4y.l5m.lv/chromedriver", options=options)
 driver.get(link)
 print("Please wait couple seconds...")
 time.sleep(3)
-driver.switch_to.frame(driver.find_element_by_id("media-player"))
-driver.switch_to.frame(driver.find_element_by_id("video-player"))
-driver.find_element_by_class_name("vjs-big-play-button").click()
+# driver.switch_to.frame(driver.find_element_by_id("media-player"))
+driver.switch_to.frame(driver.find_element(By.ID, "media-player"))
+# driver.switch_to.frame(driver.find_element_by_id("video-player"))
+# driver.find_element_by_class_name("vjs-big-play-button").click()
+driver.find_element(By.CLASS_NAME, "vjs-big-play-button").click()
 time.sleep(3)
 for request in driver.requests:
         if str(request.url).startswith('https://ltv2060.cloudycdn.services'):
@@ -39,11 +42,9 @@ for line in lines:
                         resolution=resolution.split(',')[0]
                         url_link = (lines[lines.index(line)+1]).replace('\n', '')
                         resolution_dic[resolution] = url_link
-                        # print(resolution,":",url_link)
                 else:
                         url_link = (lines[lines.index(line)+1]).replace('\n', '')
                         resolution_dic[resolution] = url_link
-                        # print(resolution,":",url_link)
 keys=[]
 for key, value in resolution_dic.items():
         keys.append(key)     
@@ -57,7 +58,7 @@ if input_resolution == '2':
 if input_resolution == '3':
         url_resolution = resolution_dic[keys[2]]
         download_file(url_start+url_resolution+url_end, f'chunklist_{keys[2]}.m3u8')
-file_name = input('Enter file name :')
+file_name = input('Enter file name: ')
 print('Downloading...')
 for file in os.listdir('.'):
         if 'chunklist' in file:
